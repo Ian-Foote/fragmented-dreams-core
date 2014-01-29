@@ -157,3 +157,111 @@ class TestTerraforming:
 
         with pytest.raises(exceptions.InvalidTargetError):
             player.terraform(board, (0, 0))
+
+    def test_homeworld(self):
+        player = Player()
+        player.biomass = 5
+        world = World.player_homeworld((0, 0), player=player)
+        board = Board([world])
+
+        with pytest.raises(exceptions.InvalidTargetError):
+            player.terraform(board, (0, 0))
+
+
+class TestDefenceNet:
+    def test_defence_net(self):
+        player = Player()
+        player.metal = 5
+        world = World((0, 0))
+        world.player = player
+        board = Board([world])
+
+        player.defence_net(board, (0, 0))
+        assert world.shield is True
+        assert player.metal == 0
+
+    def test_insufficient_resources(self):
+        player = Player()
+        player.metal = 4
+        world = World((0, 0))
+        world.player = player
+        board = Board([world])
+
+        with pytest.raises(exceptions.NotResearchedError):
+            player.defence_net(board, (0, 0))
+
+    def test_already_exists(self):
+        player = Player()
+        player.metal = 5
+        world = World((0, 0))
+        world.shield = True
+        world.player = player
+        board = Board([world])
+
+        with pytest.raises(exceptions.InvalidTargetError):
+            player.defence_net(board, (0, 0))
+
+    def test_not_controlled_world(self):
+        player = Player()
+        player.metal = 5
+        world = World((0, 0))
+        board = Board([world])
+
+        with pytest.raises(exceptions.InvalidTargetError):
+            player.defence_net(board, (0, 0))
+
+
+class TestStellarBomb:
+    def test_stellar_bomb(self):
+        player = Player()
+        player.energy = 5
+
+        world = World((0, 1), fleets=8)
+        worlds = [World.player_homeworld((0, 0), player=player), world]
+        edges = [((0, 0), (0, 1))]
+        board = Board(worlds, edges)
+
+        player.stellar_bomb(board, (0, 1))
+        assert world.fleets == 4
+        assert player.energy == 0
+
+    def test_insufficient_resources(self):
+        player = Player()
+        player.energy = 4
+
+        world = World((0, 1))
+        worlds = [World.player_homeworld((0, 0), player=player), world]
+        edges = [((0, 0), (0, 1))]
+        board = Board(worlds, edges)
+
+        with pytest.raises(exceptions.NotResearchedError):
+            player.stellar_bomb(board, (0, 1))
+
+    def test_controlled_target(self):
+        player = Player()
+        player.energy = 5
+        homeworld = World.player_homeworld((0, 0), player=player)
+        target = World((0, 1))
+        target.player = player
+        edges = [((0, 0), (0, 1))]
+
+        board = Board([homeworld, target], edges)
+
+        with pytest.raises(exceptions.InvalidTargetError):
+            player.stellar_bomb(board, (0, 0))
+
+    def test_invalid_target(self):
+        player = Player()
+        player.energy = 5
+
+        world = World((0, 2))
+        worlds = [
+            World.player_homeworld((0, 0), player=player),
+            World((0, 1)),
+            world,
+        ]
+        edges = [((0, 0), (0, 1)), ((0, 1), (0, 2))]
+        board = Board(worlds, edges)
+
+        with pytest.raises(exceptions.InvalidTargetError):
+            player.stellar_bomb(board, (0, 2))

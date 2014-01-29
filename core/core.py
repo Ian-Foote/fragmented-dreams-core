@@ -143,5 +143,51 @@ class Player:
             raise exceptions.InvalidTargetError(msg)
 
         world = board.worlds[world]
+
+        if world.resources.level > 0:
+            msg = ('World {} has already been terraformed or '
+                   'is a homeworld.'.format(world.node))
+            raise exceptions.InvalidTargetError(msg)
+
         world.resources = Resources.terraformed()
         self.biomass = 0
+
+    def defence_net(self, board, world):
+        if self.metal < 5:
+            msg = 'Defence Net special has not been researched.'
+            raise exceptions.NotResearchedError(msg)
+
+        if not self.controls_world(board, world):
+            msg = 'You must control the target world {}.'.format(world)
+            raise exceptions.InvalidTargetError(msg)
+
+        world = board.worlds[world]
+
+        if world.shield is True:
+            msg = 'World {} is already protected by a Defence Net'.format(
+                world.node)
+            raise exceptions.InvalidTargetError(msg)
+
+        world.shield = True
+        self.metal = 0
+
+    def stellar_bomb(self, board, target):
+        if self.energy < 5:
+            msg = 'Stellar Bomb special has not been researched.'
+            raise exceptions.NotResearchedError(msg)
+
+        if self.controls_world(board, target):
+            msg = 'You control target world {}.'.format(target)
+            raise exceptions.InvalidTargetError(msg)
+
+        for world in board.neighbours[target]:
+            if board.worlds[world].player == self:
+                break
+        else:
+            msg = 'Target world {} is not connected to your territory'.format(
+                target)
+            raise exceptions.InvalidTargetError(msg)
+
+        target_world = board.worlds[target]
+        target_world.fleets //= 2
+        self.energy = 0
